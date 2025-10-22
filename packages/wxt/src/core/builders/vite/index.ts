@@ -21,9 +21,6 @@ import {
 import { Hookable } from 'hookable';
 import { toArray } from '../../utils/arrays';
 import { safeVarName } from '../../utils/strings';
-import { ViteNodeServer } from 'vite-node/server';
-import { ViteNodeRunner } from 'vite-node/client';
-import { installSourcemapsSupport } from 'vite-node/source-map';
 import { createExtensionEnvironment } from '../../utils/environments';
 import { dirname, extname, join, relative } from 'node:path';
 import fs from 'fs-extra';
@@ -71,7 +68,6 @@ export async function createViteBuilder(
 
     // TODO: Remove once https://github.com/wxt-dev/wxt/pull/1411 is merged
     config.legacy ??= {};
-    // @ts-ignore: Untyped option:
     config.legacy.skipWebSocketTokenCheck = true;
 
     const server = getWxtDevServer?.();
@@ -91,7 +87,7 @@ export async function createViteBuilder(
     );
     if (
       wxtConfig.analysis.enabled &&
-      // If included, vite-node entrypoint loader will increment the
+      // If included, entrypoint loader will increment the
       // bundleAnalysis's internal build index tracker, which we don't want
       !baseConfigOptions?.excludeAnalysisPlugin
     ) {
@@ -224,8 +220,7 @@ export async function createViteBuilder(
       },
     };
   };
-
-  const createViteNodeImporter = async (paths: string[]) => {
+  const createImporterConfig = async (paths: string[]) => {
     const baseConfig = await getBaseConfig({
       excludeAnalysisPlugin: true,
     });
@@ -238,30 +233,7 @@ export async function createViteBuilder(
         wxtPlugins.removeEntrypointMainFunction(wxtConfig, path),
       ),
     };
-    const config = vite.mergeConfig(baseConfig, envConfig);
-    const server = await vite.createServer(config);
-    await server.pluginContainer.buildStart({});
-    const node = new ViteNodeServer(
-      // @ts-ignore: Some weird type error...
-      server,
-    );
-    installSourcemapsSupport({
-      getSourceMap: (source) => node.getSourceMap(source),
-    });
-    const runner = new ViteNodeRunner({
-      root: server.config.root,
-      base: server.config.base,
-      // when having the server and runner in a different context,
-      // you will need to handle the communication between them
-      // and pass to this function
-      fetchModule(id) {
-        return node.fetchModule(id);
-      },
-      resolveId(id, importer) {
-        return node.resolveId(id, importer);
-      },
-    });
-    return { runner, server };
+    return vite.mergeConfig(baseConfig, envConfig);
   };
 
   const requireDefaultExport = (path: string, mod: any) => {
@@ -284,26 +256,30 @@ export async function createViteBuilder(
     version: vite.version,
     async importEntrypoint(path) {
       const env = createExtensionEnvironment();
-      const { runner, server } = await createViteNodeImporter([path]);
-      const res = await env.run(() => runner.executeFile(path));
-      await server.close();
-      requireDefaultExport(path, res);
-      return res.default;
+      const importerConfig = await createImporterConfig([path]);
+
+      const { module } = await env.run(() =>
+        vite.runnerImport<{ default: any }>(path, importerConfig),
+      );
+      requireDefaultExport(path, module);
+      return module.default;
     },
     async importEntrypoints(paths) {
+      const importerConfig = await createImporterConfig(paths);
+
       const env = createExtensionEnvironment();
-      const { runner, server } = await createViteNodeImporter(paths);
-      const res = await env.run(() =>
+      return await env.run(() =>
         Promise.all(
           paths.map(async (path) => {
-            const mod = await runner.executeFile(path);
-            requireDefaultExport(path, mod);
-            return mod.default;
+            const { module } = await vite.runnerImport<{ default: any }>(
+              path,
+              importerConfig,
+            );
+            requireDefaultExport(path, module);
+            return module.default;
           }),
         ),
       );
-      await server.close();
-      return res;
     },
     async build(group) {
       let entryConfig;
