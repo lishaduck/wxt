@@ -1,4 +1,4 @@
-import type * as vite from 'vite';
+import * as vite from 'vite';
 import {
   BuildStepOutput,
   Entrypoint,
@@ -29,13 +29,11 @@ import { dirname, extname, join, relative } from 'node:path';
 import fs from 'fs-extra';
 import { normalizePath } from '../../utils/paths';
 
-export async function createViteBuilder(
+export function createViteBuilder(
   wxtConfig: ResolvedConfig,
   hooks: Hookable<WxtHooks>,
   getWxtDevServer?: () => WxtDevServer | undefined,
-): Promise<WxtBuilder> {
-  const vite = await import('vite');
-
+): WxtBuilder {
   /**
    * Returns the base vite config shared by all builds based on the inline and user config.
    */

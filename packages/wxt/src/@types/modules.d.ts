@@ -23,11 +23,11 @@ declare module 'web-ext-run' {
     exit(): Promise<void>;
   }
 
-  const webExt: {
-    cmd: {
-      run(config: any, executeOptions: any): Promise<WebExtRunInstance>;
-    };
+  export declare const cmd: {
+    run(config: any, executeOptions: any): Promise<WebExtRunInstance>;
   };
+
+  declare const webExt: { cmd: typeof cmd };
   export default webExt;
 }
 

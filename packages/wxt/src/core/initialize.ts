@@ -5,6 +5,7 @@ import fs from 'fs-extra';
 import path from 'node:path';
 import pc from 'picocolors';
 import { Formatter } from 'picocolors/types';
+import ora from 'ora';
 
 export async function initialize(options: {
   directory: string;
@@ -161,7 +162,6 @@ async function cloneProject({
   directory: string;
   template: Template;
 }) {
-  const { default: ora } = await import('ora');
   const spinner = ora('Downloading template').start();
   try {
     // 1. Clone repo

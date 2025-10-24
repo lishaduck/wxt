@@ -29,6 +29,7 @@ import { safeStringToNumber } from './utils/number';
 import { loadEnv } from './utils/env';
 import { getPort } from 'get-port-please';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import * as vite from 'vite';
 
 /**
  * Given an inline config, discover the config file if necessary, merge the results, resolve any
@@ -61,7 +62,7 @@ export async function resolveConfig(
 
   // Merge it into the inline config
 
-  const mergedConfig = await mergeInlineConfig(inlineConfig, userConfig);
+  const mergedConfig = mergeInlineConfig(inlineConfig, userConfig);
 
   // Apply defaults to make internal config.
 
@@ -255,10 +256,10 @@ async function resolveManifestConfig(
 /**
  * Merge the inline config and user config. Inline config is given priority. Defaults are not applied here.
  */
-async function mergeInlineConfig(
+function mergeInlineConfig(
   inlineConfig: InlineConfig,
   userConfig: UserConfig,
-): Promise<InlineConfig> {
+): InlineConfig {
   // Merge imports option
   const imports: InlineConfig['imports'] =
     inlineConfig.imports === false || userConfig.imports === false
@@ -277,11 +278,7 @@ async function mergeInlineConfig(
   const merged = defu(inlineConfig, userConfig);
 
   // Builders
-  const builderConfig = await mergeBuilderConfig(
-    merged.logger ?? consola,
-    inlineConfig,
-    userConfig,
-  );
+  const builderConfig = mergeBuilderConfig(inlineConfig, userConfig);
 
   return {
     ...merged,
@@ -566,25 +563,17 @@ const COMMAND_MODES: Record<WxtCommand, string> = {
   serve: 'development',
 };
 
-export async function mergeBuilderConfig(
-  logger: Logger,
+function mergeBuilderConfig(
   inlineConfig: InlineConfig,
   userConfig: UserConfig,
-): Promise<Pick<InlineConfig, 'vite'>> {
-  const vite = await import('vite').catch((err) => {
-    logger.debug('Failed to import vite:', err);
-  });
-  if (vite) {
-    return {
-      vite: async (env) => {
-        const resolvedInlineConfig = (await inlineConfig.vite?.(env)) ?? {};
-        const resolvedUserConfig = (await userConfig.vite?.(env)) ?? {};
-        return vite.mergeConfig(resolvedUserConfig, resolvedInlineConfig);
-      },
-    };
-  }
-
-  throw Error('Builder not found. Make sure vite is installed.');
+): Pick<InlineConfig, 'vite'> {
+  return {
+    vite: async (env) => {
+      const resolvedInlineConfig = (await inlineConfig.vite?.(env)) ?? {};
+      const resolvedUserConfig = (await userConfig.vite?.(env)) ?? {};
+      return vite.mergeConfig(resolvedUserConfig, resolvedInlineConfig);
+    },
+  };
 }
 
 export async function resolveWxtUserModules(

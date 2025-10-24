@@ -1,4 +1,6 @@
-import type { WebExtRunInstance } from 'web-ext-run';
+import webExt, { type WebExtRunInstance } from 'web-ext-run';
+import * as webExtLogger from 'web-ext-run/util/logger';
+
 import { ExtensionRunner } from '../../types';
 import { formatDuration } from '../utils/time';
 import defu from 'defu';
@@ -27,7 +29,6 @@ export function createWebExtRunner(): ExtensionRunner {
       }
 
       // Use WXT's logger instead of web-ext's built-in one.
-      const webExtLogger = await import('web-ext-run/util/logger');
       webExtLogger.consoleStream.write = ({ level, msg, name }) => {
         if (level >= ERROR_LOG_LEVEL) wxt.logger.error(name, msg);
         if (level >= WARN_LOG_LEVEL) wxt.logger.warn(msg);
@@ -80,8 +81,7 @@ export function createWebExtRunner(): ExtensionRunner {
       wxt.logger.debug('web-ext config:', finalConfig);
       wxt.logger.debug('web-ext options:', options);
 
-      const webExt = await import('web-ext-run');
-      runner = await webExt.default.cmd.run(finalConfig, options);
+      runner = await webExt.cmd.run(finalConfig, options);
 
       const duration = Date.now() - startTime;
       wxt.logger.success(`Opened browser in ${formatDuration(duration)}`);

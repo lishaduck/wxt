@@ -1,4 +1,4 @@
-import { Plugin } from 'vite';
+import type { Plugin } from 'vite';
 import { ResolvedConfig } from '../../../../types';
 import { fetchCached } from '../../../utils/network';
 

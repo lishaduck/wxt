@@ -4,6 +4,7 @@ import { buildEntrypoints } from './build-entrypoints';
 import { generateManifest, writeManifest } from '../../utils/manifest';
 import { wxt } from '../../wxt';
 import type { Browser } from '@wxt-dev/browser';
+import ora from 'ora';
 
 /**
  * Given a configuration, list of entrypoints, and an existing, partial output, build the
@@ -33,7 +34,6 @@ export async function rebuild(
   manifest: Browser.runtime.Manifest;
   warnings: any[][];
 }> {
-  const { default: ora } = await import('ora');
   const spinner = ora(`Preparing...`).start();
 
   // Update types directory with new files and types

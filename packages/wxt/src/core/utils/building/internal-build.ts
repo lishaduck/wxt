@@ -18,6 +18,7 @@ import {
 import { wxt } from '../../wxt';
 import { mergeJsonOutputs } from '@aklinker1/rollup-plugin-visualizer';
 import { isCI } from 'ci-info';
+import open from 'open';
 
 /**
  * Builds the extension based on an internal config. No more config discovery is performed, the
@@ -86,7 +87,6 @@ export async function internalBuild(): Promise<BuildOutput> {
         wxt.logger.debug(`Skipped opening ${pc.yellow(statsPath)} in CI`);
       } else {
         wxt.logger.info(`Opening ${pc.yellow(statsPath)} in browser...`);
-        const { default: open } = await import('open');
         open(wxt.config.analysis.outputFile);
       }
     }
